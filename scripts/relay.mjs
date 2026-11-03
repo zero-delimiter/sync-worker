@@ -6,22 +6,43 @@ const BATCH = 20;
 const TIMEOUT_MS = 30_000;
 const MAX_STREAK = 5;
 const MAX_PAUSE_MS = 5 * 60 * 1000;
+const API_ATTEMPTS = 4;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function reason(failure) {
+  const cause = failure?.cause;
+  const detail = cause?.code ?? cause?.message ?? "";
+  return detail ? `${failure.message}（${detail}）` : String(failure?.message ?? failure);
+}
+
 async function api(path, body) {
-  const response = await fetch(API + path, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT_MS * 2),
-  });
-  if (!response.ok) {
-    throw new Error(`${path} 返回 HTTP ${response.status}`);
+  let problem = "";
+  for (let attempt = 0; attempt < API_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await sleep(2000 * 2 ** (attempt - 1));
+    }
+    try {
+      const response = await fetch(API + path, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(TIMEOUT_MS * 2),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      problem = `${path} 返回 HTTP ${response.status}`;
+      if (response.status < 500) {
+        break;
+      }
+    } catch (failure) {
+      problem = `${path} 请求失败：${reason(failure)}`;
+    }
   }
-  return response.json();
+  throw new Error(problem);
 }
 
 async function download(url) {
