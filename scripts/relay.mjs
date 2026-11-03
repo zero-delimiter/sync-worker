@@ -1,7 +1,7 @@
 const API = (process.env.API_URL || "").replace(/\/+$/, "");
 const TOKEN = process.env.API_TOKEN;
 const USER_AGENT = process.env.USER_AGENT;
-const BUDGET_MS = 40 * 60 * 1000;
+const BUDGET_MS = 115 * 60 * 1000;
 const BATCH = 20;
 const TIMEOUT_MS = 30_000;
 const MAX_STREAK = 5;
