@@ -33,16 +33,13 @@ async function download(url) {
     return {
       status: response.status,
       type: response.headers.get("content-type") ?? "",
+      url: response.url,
       body: await response.text(),
       retryAfter: Number(response.headers.get("retry-after")) || 0,
     };
   } catch {
-    return { status: 0, type: "", body: "", retryAfter: 0 };
+    return { status: 0, type: "", url: "", body: "", retryAfter: 0 };
   }
-}
-
-function settled(status) {
-  return (status >= 200 && status < 300) || status === 404 || status === 410;
 }
 
 async function main() {
@@ -72,8 +69,14 @@ async function main() {
           await sleep(pause);
         }
         const result = await download(job.url);
-        await api("/v1/ingest/page", { key: job.key, status: result.status, type: result.type, body: result.body });
-        if (settled(result.status)) {
+        const outcome = await api("/v1/ingest/page", {
+          key: job.key,
+          status: result.status,
+          type: result.type,
+          url: result.url,
+          body: result.body,
+        });
+        if (outcome.ok) {
           done++;
           streak = 0;
           pause = plan.delay;
@@ -82,7 +85,7 @@ async function main() {
           streak++;
           pause = Math.min(MAX_PAUSE_MS, Math.max(plan.delay * 2 ** streak, result.retryAfter * 1000));
           if (streak >= MAX_STREAK) {
-            throw new Error(`连续 ${streak} 次失败，最后一次 HTTP ${result.status}`);
+            throw new Error(`连续 ${streak} 次失败，最后一次 HTTP ${result.status}（${outcome.reason ?? "unknown"}）`);
           }
         }
       }
