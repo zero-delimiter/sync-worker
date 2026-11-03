@@ -52,9 +52,9 @@ const TOKEN = process.env.API_TOKEN;
 const SOURCE_URL = process.env.SOURCE_URL;
 const USER_AGENT = process.env.USER_AGENT;
 const HEAD_PAGES = number(process.env.HEAD_PAGES, 2);
-const FILL_PAGES = number(process.env.FILL_PAGES, 40);
-const SWEEP_PAGES = number(process.env.SWEEP_PAGES, 4);
-const DELAY_MS = number(process.env.DELAY_MS, 1500);
+const FILL_PAGES = number(process.env.FILL_PAGES, 2000);
+const SWEEP_PAGES = number(process.env.SWEEP_PAGES, 20);
+const DELAY_MS = number(process.env.DELAY_MS, 1000);
 
 async function api(path, body) {
   const response = await fetch(API + path, {
@@ -142,6 +142,7 @@ async function main() {
       if (pages > 0 && cursor > pages) {
         cursor = 1;
         filled = true;
+        break;
       }
     }
   } catch (failure) {
