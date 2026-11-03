@@ -12,7 +12,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,4 +23,10 @@ jobs:
           API_URL: ${{ secrets.API_URL }}
           API_TOKEN: ${{ secrets.API_TOKEN }}
           SOURCE_URL: ${{ secrets.SOURCE_URL }}
+          USER_AGENT: ${{ secrets.USER_AGENT }}
+      - if: ${{ !cancelled() }}
+        run: node scripts/relay.mjs
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
           USER_AGENT: ${{ secrets.USER_AGENT }}
