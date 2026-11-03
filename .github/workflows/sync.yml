@@ -9,6 +9,10 @@ concurrency:
   group: sync
   cancel-in-progress: false
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -24,9 +28,15 @@ jobs:
           API_TOKEN: ${{ secrets.API_TOKEN }}
           SOURCE_URL: ${{ secrets.SOURCE_URL }}
           USER_AGENT: ${{ secrets.USER_AGENT }}
-      - if: ${{ !cancelled() }}
+      - id: relay
+        if: ${{ !cancelled() }}
         run: node scripts/relay.mjs
         env:
           API_URL: ${{ secrets.API_URL }}
           API_TOKEN: ${{ secrets.API_TOKEN }}
           USER_AGENT: ${{ secrets.USER_AGENT }}
+      - if: ${{ !cancelled() && steps.relay.outputs.more == 'true' }}
+        run: gh workflow run sync.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

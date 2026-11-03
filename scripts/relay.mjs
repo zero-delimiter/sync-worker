@@ -1,3 +1,5 @@
+import { appendFileSync } from "node:fs";
+
 const API = (process.env.API_URL || "").replace(/\/+$/, "");
 const TOKEN = process.env.API_TOKEN;
 const USER_AGENT = process.env.USER_AGENT;
@@ -75,11 +77,13 @@ async function main() {
   let failed = 0;
   let streak = 0;
   let pause = 0;
+  let drained = false;
   let error = "";
   try {
     while (Date.now() - started < BUDGET_MS) {
       const plan = await api("/v1/ingest/next", { limit: BATCH });
       if (!Array.isArray(plan.jobs) || plan.jobs.length === 0) {
+        drained = true;
         break;
       }
       for (const job of plan.jobs) {
@@ -115,6 +119,9 @@ async function main() {
     error = failure instanceof Error ? failure.message : String(failure);
   }
   console.log(`完成 ${done} 项，失败 ${failed} 项，用时 ${Math.round((Date.now() - started) / 1000)} 秒`);
+  if (!drained && !error && process.env.GITHUB_OUTPUT) {
+    appendFileSync(process.env.GITHUB_OUTPUT, "more=true\n");
+  }
   if (error) {
     console.error(error);
     process.exitCode = 1;
